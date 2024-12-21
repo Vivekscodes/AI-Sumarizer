@@ -39,7 +39,7 @@ async function summarizeText(text, tab) {
     const apiUrl = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
     const apiUrl2 = "https://api-inference.huggingface.co/models/ainize/bart-base-cnn";
     // Replace with your endpoint
-    const apiKey = "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";
+    const apiKey = "";
 
     try {
         let response = await fetch(apiUrl2, {
