@@ -1,28 +1,32 @@
+```javascript
 chrome.runtime.onInstalled.addListener(() => {
     console.log("AI Summarizer Extension Installed");
 
-    // Create context menu when user selects text
+    // Create context menu item for summarizing selected text
     chrome.contextMenus.create({
         id: "summarize-selection",
         title: "Summarize this text with AI",
-        contexts: ["selection"], // This allows the option when text is selected
+        contexts: ["selection"], // Show option only when text is selected
     });
 });
 
-// Listener for the context menu click
+// Handle context menu item click
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "summarize-selection") {
+        // Execute script to get the selected text
         chrome.scripting.executeScript(
             {
                 target: { tabId: tab.id },
                 func: getSelectedText,
             },
             (result) => {
-                const selectedText = result[0].result;
+                // Extract selected text from the result
+                const selectedText = result?.[0]?.result;
                 if (selectedText) {
-                    // displayLoaderOnPage(tab.id);
+                    // Summarize the selected text
                     summarizeText(selectedText, tab);
                 } else {
+                    // Alert the user if no text is selected
                     alert("Please select some text to summarize.");
                 }
             }
@@ -30,31 +34,32 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
     }
 });
 
-// Get selected text from the page
+// Function to get the selected text from the page
 function getSelectedText() {
     return window.getSelection().toString();
 }
 
+// Function to summarize the given text
 async function summarizeText(text, tab) {
-    const apiUrl = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
-    const apiUrl2 = "https://api-inference.huggingface.co/models/ainize/bart-base-cnn";
-    // Replace with your endpoint
-    const apiKey = "";
+    const apiUrlAinize = "https://api-inference.huggingface.co/models/ainize/bart-base-cnn";
+    const apiUrlFacebook = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
+    const apiKey = ""; // Replace with your API key
 
     try {
-        let response = await fetch(apiUrl2, {
+        // First try to summarize the text with ainize model
+        let response = await fetch(apiUrlAinize, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${apiKey}`,
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({ inputs: text }),
-
         });
 
+        // If the request was not successful, try with facebook model
         if (!response.ok) {
             try {
-                response = await fetch(apiUrl, {
+                response = await fetch(apiUrlFacebook, {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
@@ -67,15 +72,16 @@ async function summarizeText(text, tab) {
                 console.error("Error summarizing text from facebook:", error);
             }
             console.error("Error summarizing text:", response.status);
-
         }
+
         const data = await response.json();
-        console.log("data from ainize", data[0].summary_text);
+        console.log("data from ainize", data?.[0]?.summary_text);
 
-
-        if (data && data[0] && data[0].summary_text) {
+        // If summary is available, display it on the page
+        if (data?.[0]?.summary_text) {
             const summary = data[0].summary_text;
-            // Ensure we use the tabs variable inside the chrome.tabs.query callback
+
+            // Display the summary on the page
             chrome.scripting.executeScript({
                 target: { tabId: tab.id },
                 func: displaySummaryOnPage,
@@ -89,9 +95,9 @@ async function summarizeText(text, tab) {
                     displayLoaderOnPage(tab.id);
                 },
             });
-
         }
 
+        // Remove the summary after 10 seconds
         setTimeout(() => {
             chrome.scripting.executeScript({
                 target: { tabId: tab.id },
@@ -104,30 +110,10 @@ async function summarizeText(text, tab) {
             });
         }, 10000);
 
-
     } catch (error) {
         console.error("Error summarizing text:", error);
     }
-
 }
-
-// Function to display the loader on the page
-// function displayLoaderOnPage(tabId) {
-// Create an element to display the loader on the page
-//     console.log("Displaying loader on page");
-//     const loaderDiv = document.createElement('dia');
-//     loaderDiv.style.position = 'fixed';
-//     loaderDiv.style.top = '20px';
-//     loaderDiv.style.right = '0px';
-//     loaderDiv.style.bottom = '0px';
-//     loaderDiv.style.left = '0px';
-//     loaderDiv.style.backgroundColor = 'rgba(0,0,0,0.5)';
-//     loaderDiv.style.display = 'flex';
-//     loaderDiv.style.justifyContent = 'center';
-//     loaderDiv.style.alignItems = 'center';
-//     loaderDiv.innerHTML = `<div class="loader"></div>`;
-//     document.body.appendChild(loaderDiv);
-// }
 
 // Function to display the summary on the page
 function displaySummaryOnPage(summary) {
@@ -153,3 +139,6 @@ function displaySummaryOnPage(summary) {
     document.body.appendChild(summaryDiv);
 }
 
+// Function to display the loader on the page
+function displayLoaderOnPage(tabId) { }
+```
