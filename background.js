@@ -14,23 +14,20 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === "summarize-selection") {
         // Execute script to get the selected text
-        chrome.scripting.executeScript(
-            {
-                target: { tabId: tab.id },
-                func: getSelectedText,
-            },
-            (result) => {
-                // Extract selected text from the result
-                const selectedText = result?.[0]?.result;
-                if (selectedText) {
-                    // Summarize the selected text
-                    summarizeText(selectedText, tab);
-                } else {
-                    // Alert the user if no text is selected
-                    alert("Please select some text to summarize.");
-                }
+        chrome.scripting.executeScript({
+            target: { tabId: tab.id },
+            func: getSelectedText,
+        }, (result) => {
+            // Extract selected text from the result
+            const selectedText = result?.[0]?.result;
+            if (selectedText) {
+                // Summarize the selected text
+                summarizeText(selectedText, tab);
+            } else {
+                // Alert the user if no text is selected
+                alert("Please select some text to summarize.");
             }
-        );
+        });
     }
 });
 
@@ -41,13 +38,13 @@ function getSelectedText() {
 
 // Function to summarize the given text
 async function summarizeText(text, tab) {
-    const apiUrlAinize = "https://api-inference.huggingface.co/models/ainize/bart-base-cnn";
-    const apiUrlFacebook = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
+    const ainizeApiUrl = "https://api-inference.huggingface.co/models/ainize/bart-base-cnn";
+    const facebookApiUrl = "https://api-inference.huggingface.co/models/facebook/bart-large-cnn";
     const apiKey = ""; // Replace with your API key
 
     try {
         // First try to summarize the text with ainize model
-        let response = await fetch(apiUrlAinize, {
+        let response = await fetch(ainizeApiUrl, {
             method: "POST",
             headers: {
                 "Authorization": `Bearer ${apiKey}`,
@@ -58,8 +55,9 @@ async function summarizeText(text, tab) {
 
         // If the request was not successful, try with facebook model
         if (!response.ok) {
+            console.error("Error summarizing text from ainize, trying facebook model:", response.status);
             try {
-                response = await fetch(apiUrlFacebook, {
+                response = await fetch(facebookApiUrl, {
                     method: "POST",
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
@@ -70,8 +68,8 @@ async function summarizeText(text, tab) {
             }
             catch (error) {
                 console.error("Error summarizing text from facebook:", error);
+                return; // Exit the function if both APIs fail
             }
-            console.error("Error summarizing text:", response.status);
         }
 
         const data = await response.json();
